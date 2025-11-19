@@ -1,0 +1,42 @@
+name: Daily LeetCode Agent
+
+on:
+  schedule:
+    - cron: "0 15 * * *" # 09:00 AM CST (UTC-6) -> 15:00 UTC
+  workflow_dispatch: # Allow manual runs from Actions tab
+
+jobs:
+  generate-solution:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: pip install openai
+
+      - name: Run AI LeetCode agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python agent/daily_leetcode.py
+
+      - name: Commit & Push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config --global user.name "LeetCode-AI-Agent"
+          git config --global user.email "agent@github.com"
+
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .
+            git commit -m "Daily LeetCode solution (AI Agent)"
+            git push
+          else
+            echo "No changes to commit."
+          fi

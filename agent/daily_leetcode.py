@@ -9,24 +9,23 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 def pick_question():
     prompt = """
     Pick ONE real LeetCode problem for today's practice.
-
     Difficulty distribution:
     - 50% Easy
     - 35% Medium
     - 15% Hard
 
-    Output STRICT JSON ONLY, in this format:
+    Output STRICT JSON ONLY:
     {
       "title": "",
       "id": "",
       "difficulty": "",
       "url": "",
-      "prompt": "full problem statement"
+      "prompt": "problem statement"
     }
     """
 
     response = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
@@ -58,7 +57,7 @@ def solve_question(q):
     """
 
     response = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.4
     )
@@ -103,7 +102,7 @@ def main():
     print("Writing output files...")
     write_files(q, solutions)
 
-    print("Daily LeetCode solution generated successfully!")
+    print("Done!")
 
 
 if __name__ == "__main__":

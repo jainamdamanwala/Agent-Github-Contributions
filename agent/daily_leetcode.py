@@ -5,40 +5,42 @@ import re
 from pathlib import Path
 from groq import Groq
 
-# Initialize Groq client
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# ----------------------------------------
-# JSON Extraction Helper
-# ----------------------------------------
-def extract_json(text):
-    """
-    Extract first valid JSON object from model output.
-    Removes markdown fences and any extra text.
-    """
-    # Remove markdown ```json and ```
+# ---------------------------------------------------------
+# JSON SANITIZER — Fix all messy model outputs into valid JSON
+# ---------------------------------------------------------
+def sanitize_model_output_to_json(text):
+    # Remove markdown ``` blocks
     cleaned = text.replace("```json", "").replace("```", "").strip()
 
-    # Regex to find first JSON object
+    # Convert triple quotes → escaped strings
+    cleaned = re.sub(r'"""\s*(.*?)\s*"""', lambda m: json.dumps(m.group(1)), cleaned, flags=re.DOTALL)
+
+    # Convert nested objects inside quotes into valid strings
+    cleaned = re.sub(r'("explanation"\s*:\s*)\{(.*?)\}',
+                     lambda m: f'"explanation": {json.dumps("{" + m.group(2) + "}")}',
+                     cleaned,
+                     flags=re.DOTALL)
+
+    # Find JSON object
     match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
     if not match:
-        print("RAW MODEL OUTPUT (for debugging):")
-        print(text)
-        raise ValueError("❌ No JSON found in model output")
+        raise ValueError("Model did not return JSON.")
 
     json_str = match.group(0)
 
+    # Try parsing
     try:
         return json.loads(json_str)
-    except Exception:
-        print("FAILED JSON PARSE. RAW:")
-        print(json_str)
-        raise
+    except Exception as e:
+        print("FINAL CLEANED JSON STRING:", json_str)
+        raise e
 
 
-# ----------------------------------------
-# STEP 1 — Pick LeetCode Question
-# ----------------------------------------
+# ---------------------------------------------------------
+# Pick Question
+# ---------------------------------------------------------
 def pick_question():
     prompt = """
     Pick ONE real LeetCode problem.
@@ -48,18 +50,18 @@ def pick_question():
     - 35% Medium
     - 15% Hard
 
-    STRICT INSTRUCTIONS:
-    - Output JSON only.
-    - No markdown.
-    - No commentary.
+    STRICT:
+    - Output ONLY JSON
+    - No markdown
+    - No commentary
 
-    JSON FORMAT:
+    FORMAT:
     {
-      "title": "string",
-      "id": "string or number",
-      "difficulty": "Easy/Medium/Hard",
-      "url": "link",
-      "prompt": "full problem statement"
+      "title": "",
+      "id": "",
+      "difficulty": "",
+      "url": "",
+      "prompt": ""
     }
     """
 
@@ -70,15 +72,15 @@ def pick_question():
     )
 
     raw = response.choices[0].message.content.strip()
-    return extract_json(raw)
+    return sanitize_model_output_to_json(raw)
 
 
-# ----------------------------------------
-# STEP 2 — Solve LeetCode Problem
-# ----------------------------------------
+# ---------------------------------------------------------
+# Solve Question
+# ---------------------------------------------------------
 def solve_question(q):
     prompt = f"""
-    Solve the following LeetCode problem.
+    Solve the LeetCode problem:
 
     Title: {q['title']}
     Difficulty: {q['difficulty']}
@@ -86,16 +88,16 @@ def solve_question(q):
     Problem:
     {q['prompt']}
 
-    STRICT INSTRUCTIONS:
-    - Output ONLY JSON.
-    - Do NOT include ```json, ``` or markdown.
-    - Do NOT include comments outside JSON.
+    STRICT:
+    - JSON ONLY
+    - No markdown
+    - No commentary
 
-    REQUIRED FORMAT:
+    FORMAT:
     {{
-      "python": "full python solution",
-      "java": "full java solution",
-      "explanation": "detailed explanation with complexities"
+      "python": "string",
+      "java": "string",
+      "explanation": "string"
     }}
     """
 
@@ -106,54 +108,47 @@ def solve_question(q):
     )
 
     raw = response.choices[0].message.content.strip()
-    return extract_json(raw)
+    return sanitize_model_output_to_json(raw)
 
 
-# ----------------------------------------
-# STEP 3 — Write Output to Files
-# ----------------------------------------
+# ---------------------------------------------------------
+# Write files
+# ---------------------------------------------------------
 def write_files(question, solutions):
     today = datetime.date.today().isoformat()
     folder = Path(f"solutions/{today}")
     folder.mkdir(parents=True, exist_ok=True)
 
-    # Python
-    with open(folder / "solution.py", "w", encoding="utf-8") as f:
-        f.write(f"# {question['title']}\n")
-        f.write(f"# Difficulty: {question['difficulty']}\n")
-        f.write(f"# URL: {question['url']}\n\n")
+    with open(folder / "solution.py", "w") as f:
+        f.write(f"# {question['title']}\n# Difficulty: {question['difficulty']}\n# URL: {question['url']}\n\n")
         f.write(solutions["python"])
 
-    # Java
-    with open(folder / "solution.java", "w", encoding="utf-8") as f:
-        f.write(f"// {question['title']}\n")
-        f.write(f"// Difficulty: {question['difficulty']}\n")
-        f.write(f"// URL: {question['url']}\n\n")
+    with open(folder / "solution.java", "w") as f:
+        f.write(f"// {question['title']}\n// Difficulty: {question['difficulty']}\n// URL: {question['url']}\n\n")
         f.write(solutions["java"])
 
-    # Explanation
-    with open(folder / "explanation.md", "w", encoding="utf-8") as f:
+    with open(folder / "explanation.md", "w") as f:
         f.write(f"# {question['title']}\n\n")
-        f.write(f"**ID:** {question['id']}\n\n")
-        f.write(f"**Difficulty:** {question['difficulty']}\n\n")
-        f.write(f"**URL:** {question['url']}\n\n")
+        f.write(f"**ID:** {question['id']}  \n")
+        f.write(f"**Difficulty:** {question['difficulty']}  \n")
+        f.write(f"**URL:** {question['url']}  \n\n")
         f.write("## Explanation\n\n")
         f.write(solutions["explanation"])
 
 
-# ----------------------------------------
-# MAIN EXECUTION
-# ----------------------------------------
+# ---------------------------------------------------------
+# Main
+# ---------------------------------------------------------
 def main():
     print("Selecting today's LeetCode problem...")
-    question = pick_question()
-    print(f"Picked: {question['title']} ({question['difficulty']})")
+    q = pick_question()
+    print(f"Picked: {q['title']} ({q['difficulty']})")
 
     print("Generating solution...")
-    solutions = solve_question(question)
+    solutions = solve_question(q)
 
     print("Writing files...")
-    write_files(question, solutions)
+    write_files(q, solutions)
 
     print("🎉 Daily LeetCode solution generated successfully!")
 

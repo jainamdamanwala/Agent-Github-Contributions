@@ -6,15 +6,7 @@ from groq import Groq
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-
 def pick_question():
-    """
-    Use LLaMA-3-70B to pick a random LeetCode question.
-    Mixed difficulty distribution:
-    - Easy (50%)
-    - Medium (35%)
-    - Hard (15%)
-    """
     prompt = """
     Pick ONE real LeetCode problem for today's practice.
 
@@ -34,7 +26,7 @@ def pick_question():
     """
 
     response = client.chat.completions.create(
-        model="llama3-70b-8192",
+        model="llama-3.1-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
@@ -44,10 +36,6 @@ def pick_question():
 
 
 def solve_question(q):
-    """
-    Solve the selected LeetCode problem in Python + Java
-    using Groq LLaMA-3-70B.
-    """
     prompt = f"""
     Solve this LeetCode problem:
 
@@ -58,9 +46,8 @@ def solve_question(q):
     {q['prompt']}
 
     Requirements:
-    - Provide a complete Python solution (class Solution, LeetCode ready).
-    - Provide a complete Java solution (class Solution, LeetCode ready).
-    - Include a detailed explanation with approach + time/space complexity.
+    - Provide Python and Java LeetCode-ready solutions.
+    - Include a detailed explanation.
 
     Output STRICT JSON ONLY:
     {{
@@ -71,7 +58,7 @@ def solve_question(q):
     """
 
     response = client.chat.completions.create(
-        model="llama3-70b-8192",
+        model="llama-3.1-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.4
     )
@@ -81,28 +68,22 @@ def solve_question(q):
 
 
 def write_files(question, solutions):
-    """
-    Write out all generated files into: solutions/YYYY-MM-DD/
-    """
     today = datetime.date.today().isoformat()
     folder = Path(f"solutions/{today}")
     folder.mkdir(parents=True, exist_ok=True)
 
-    # Python
     with open(folder / "solution.py", "w", encoding="utf-8") as f:
         f.write("# " + question["title"] + "\n")
         f.write(f"# Difficulty: {question['difficulty']}\n")
         f.write(f"# URL: {question['url']}\n\n")
         f.write(solutions["python"])
 
-    # Java
     with open(folder / "solution.java", "w", encoding="utf-8") as f:
         f.write("// " + question["title"] + "\n")
         f.write(f"// Difficulty: {question['difficulty']}\n")
         f.write(f"// URL: {question['url']}\n\n")
         f.write(solutions["java"])
 
-    # Explanation
     with open(folder / "explanation.md", "w", encoding="utf-8") as f:
         f.write(f"# {question['title']}\n\n")
         f.write(f"**ID:** {question['id']}  \n")

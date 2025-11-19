@@ -1,41 +1,42 @@
 import os
-import openai
-import datetime
 import json
+import datetime
 from pathlib import Path
+from groq import Groq
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
 def pick_question():
     """
-    AI picks 1 random LeetCode question (Easy / Medium / Hard).
-    Mixed difficulty over time.
+    Use LLaMA-3-70B to pick a random LeetCode question.
+    Mixed difficulty distribution:
+    - Easy (50%)
+    - Medium (35%)
+    - Hard (15%)
     """
     prompt = """
-    You are helping me practice LeetCode daily.
+    Pick ONE real LeetCode problem for today's practice.
 
-    Today, randomly choose ONE LeetCode problem:
-    - Difficulty must be randomly selected among: Easy, Medium, Hard
-    - Over many days, distribution should be roughly:
-        * 50% Easy
-        * 35% Medium
-        * 15% Hard
-    - Pick a real, well-known LeetCode problem.
+    Difficulty distribution:
+    - 50% Easy
+    - 35% Medium
+    - 15% Hard
 
-    Return STRICTLY valid JSON ONLY, no backticks, no extra text, in this format:
+    Output STRICT JSON ONLY, in this format:
     {
-      "title": "Two Sum",
-      "id": "1",
-      "difficulty": "Easy",
-      "url": "https://leetcode.com/problems/two-sum/",
-      "prompt": "full official or near-official problem statement"
+      "title": "",
+      "id": "",
+      "difficulty": "",
+      "url": "",
+      "prompt": "full problem statement"
     }
     """
 
-    response = openai.chat.completions.create(
-        model="gpt-4.1",
-        messages=[{"role": "user", "content": prompt}]
+    response = client.chat.completions.create(
+        model="llama3-70b-8192",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7
     )
 
     raw = response.choices[0].message.content.strip()
@@ -44,43 +45,35 @@ def pick_question():
 
 def solve_question(q):
     """
-    Generate Python + Java solutions and explanation for the selected problem.
+    Solve the selected LeetCode problem in Python + Java
+    using Groq LLaMA-3-70B.
     """
     prompt = f"""
-    Solve the following LeetCode problem.
+    Solve this LeetCode problem:
 
     Title: {q['title']}
-    ID: {q['id']}
     Difficulty: {q['difficulty']}
     URL: {q['url']}
-
     Problem Statement:
     {q['prompt']}
 
     Requirements:
-    - Provide a clean, production-quality solution in **Python**.
-    - Provide a clean, production-quality solution in **Java**.
-    - Both solutions must be complete and directly runnable on LeetCode.
-      * For Python: define a class Solution with the required method.
-      * For Java: define class Solution with the required method.
-    - Add comments only where useful, not everywhere.
-    - Then write a detailed explanation with:
-        * Approach
-        * Why it works
-        * Time complexity
-        * Space complexity
+    - Provide a complete Python solution (class Solution, LeetCode ready).
+    - Provide a complete Java solution (class Solution, LeetCode ready).
+    - Include a detailed explanation with approach + time/space complexity.
 
-    Output STRICTLY valid JSON ONLY, no backticks, no extra text, in this format:
-    {
-      "python": "full python solution code here",
-      "java": "full java solution code here",
-      "explanation": "detailed explanation here"
-    }
+    Output STRICT JSON ONLY:
+    {{
+      "python": "",
+      "java": "",
+      "explanation": ""
+    }}
     """
 
-    response = openai.chat.completions.create(
-        model="gpt-4.1",
-        messages=[{"role": "user", "content": prompt}]
+    response = client.chat.completions.create(
+        model="llama3-70b-8192",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.4
     )
 
     raw = response.choices[0].message.content.strip()
@@ -89,20 +82,20 @@ def solve_question(q):
 
 def write_files(question, solutions):
     """
-    Write solutions and explanation under solutions/YYYY-MM-DD/
+    Write out all generated files into: solutions/YYYY-MM-DD/
     """
     today = datetime.date.today().isoformat()
     folder = Path(f"solutions/{today}")
     folder.mkdir(parents=True, exist_ok=True)
 
-    # Python solution
+    # Python
     with open(folder / "solution.py", "w", encoding="utf-8") as f:
         f.write("# " + question["title"] + "\n")
         f.write(f"# Difficulty: {question['difficulty']}\n")
         f.write(f"# URL: {question['url']}\n\n")
         f.write(solutions["python"])
 
-    # Java solution
+    # Java
     with open(folder / "solution.java", "w", encoding="utf-8") as f:
         f.write("// " + question["title"] + "\n")
         f.write(f"// Difficulty: {question['difficulty']}\n")
@@ -115,22 +108,21 @@ def write_files(question, solutions):
         f.write(f"**ID:** {question['id']}  \n")
         f.write(f"**Difficulty:** {question['difficulty']}  \n")
         f.write(f"**Link:** {question['url']}\n\n")
-        f.write("## Explanation\n\n")
         f.write(solutions["explanation"])
 
 
 def main():
-    print("Picking today's LeetCode problem (mixed difficulty)...")
-    question = pick_question()
-    print(f"Selected: {question['title']} ({question['difficulty']})")
+    print("Selecting today's LeetCode problem...")
+    q = pick_question()
+    print(f"Picked: {q['title']} ({q['difficulty']})")
 
     print("Generating solutions...")
-    solutions = solve_question(question)
+    solutions = solve_question(q)
 
-    print("Writing files...")
-    write_files(question, solutions)
+    print("Writing output files...")
+    write_files(q, solutions)
 
-    print("Daily LeetCode solution generated successfully.")
+    print("Daily LeetCode solution generated successfully!")
 
 
 if __name__ == "__main__":

@@ -1,16 +1,16 @@
-name: Daily LeetCode Agent
+name: Daily LeetCode Agent (Groq)
 
 on:
   schedule:
-    - cron: "0 15 * * *" # 09:00 AM CST (UTC-6) -> 15:00 UTC
-  workflow_dispatch: # Allow manual runs from Actions tab
+    - cron: "0 15 * * *" # Runs daily @ 9 AM CST
+  workflow_dispatch:
 
 jobs:
   generate-solution:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -19,34 +19,23 @@ jobs:
           python-version: "3.10"
 
       - name: Install dependencies
-        run: pip install openai
+        run: pip install groq
 
-      - name: Debug API Key
-        run: |
-          if [ -z "$OPENAI_API_KEY" ]; then
-            echo "❌ OPENAI_API_KEY is NOT set"
-            exit 1
-          else
-            echo "✅ OPENAI_API_KEY is set"
-          fi
+      - name: Run AI LeetCode Agent (Groq)
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-
-      - name: Run AI LeetCode agent
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python agent/daily_leetcode.py
 
       - name: Commit & Push changes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.name "LeetCode-AI-Agent"
+          git config --global user.name "Groq-LeetCode-Agent"
           git config --global user.email "agent@github.com"
 
           if [ -n "$(git status --porcelain)" ]; then
             git add .
-            git commit -m "Daily LeetCode solution (AI Agent)"
+            git commit -m "Daily LeetCode Solution via Groq AI Agent"
             git push
           else
             echo "No changes to commit."

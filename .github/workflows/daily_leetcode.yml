@@ -26,17 +26,12 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python agent/daily_leetcode.py
 
-      - name: Commit & Push changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit & Push
         run: |
-          git config --global user.name "Groq-LeetCode-Agent"
+          git config --global user.name "LeetCode-AI-Agent"
           git config --global user.email "agent@github.com"
-
-          if [ -n "$(git status --porcelain)" ]; then
-            git add .
-            git commit -m "Daily LeetCode Solution via Groq AI Agent"
-            git push
-          else
-            echo "No changes to commit."
-          fi
+          git add .
+          git commit -m "Daily LeetCode Solution via Groq AI Agent" || echo "Nothing to commit"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

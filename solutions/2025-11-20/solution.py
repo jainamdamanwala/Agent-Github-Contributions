@@ -1,33 +1,17 @@
-# Minimum Window Substring
+# Container With Most Water
 # Difficulty: Hard
-# URL: https://leetcode.com/problems/minimum-window-substring/
+# URL: https://leetcode.com/problems/container-with-most-water/
 
-def minimumWindowSubstring(s: str, t: str) -> str:
-  if not s or not t:
-    return ''
-  t_count = Counter(t)
-  required = len(t_count)
+def maxArea(height):
   left = 0
-  min_len = float('inf')
-  min_window = ''
-  formed = 0
-  window_counts = {}
-
-  for right in range(len(s)):
-    character = s[right]
-    window_counts[character] = window_counts.get(character, 0) + 1
-
-    if character in t_count and window_counts[character] == t_count[character]:
-      formed += 1
-
-    while left <= right and formed == required:
-      character = s[left]
-      if right - left + 1 < min_len:
-        min_len = right - left + 1
-        min_window = s[left:right + 1]
-      window_counts[character] -= 1
-      if character in t_count and window_counts[character] < t_count[character]:
-        formed -= 1
+  right = len(height) - 1
+  max_area = 0
+  while left < right:
+    h = min(height[left], height[right])
+    w = right - left
+    max_area = max(max_area, h * w)
+    if height[left] < height[right]:
       left += 1
-
-  return min_window
+    else:
+      right -= 1
+  return max_area

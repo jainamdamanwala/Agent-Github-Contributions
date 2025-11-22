@@ -1,0 +1,9 @@
+# Median of Two Sorted Arrays
+
+**ID:** 4  
+**Difficulty:** Hard  
+**URL:** https://leetcode.com/problems/median-of-two-sorted-arrays/  
+
+## Explanation
+
+{"problem": "There are two sorted arrays nums1 and nums2 of size m and n respectively. Find the median of the two sorted arrays. The overall run time complexity should be O(log (m+n)).", "solution": "The solution uses a binary search approach to find the median of the two sorted arrays. It first checks if the length of nums1 is greater than the length of nums2 and swaps them if necessary. Then it initializes the minimum and maximum possible values for the binary search, which are 0 and the length of nums1, respectively. The loop continues until the minimum and maximum values converge. Inside the loop, it calculates the middle index i and the corresponding index j in the other array. If the value at index i in nums1 is less than the value at index j in nums2, it means the median is in the right half, so it updates the minimum value to i + 1. If the value at index i in nums1 is greater than the value at index j in nums2, it means the median is in the left half, so it updates the maximum value to i - 1. If the values at indices i and j are equal, it means the median is at the middle index, so it returns the average of the values at indices i and j. If the total length of the two arrays is odd, it returns the value at index i. If the total length of the two arrays is even, it returns the average of the values at indices i - 1 and j. The time complexity of this solution is O(log (m+n)) because the binary search has a logarithmic time complexity, and the space complexity is O(1) because it only uses a constant amount of space to store the indices and the median value."}

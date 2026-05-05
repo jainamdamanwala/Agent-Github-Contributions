@@ -1,0 +1,5 @@
+// 3Sum
+// Difficulty: Medium
+// URL: https://leetcode.com/problems/3sum/
+
+class Solution {\n    public List<List<Integer>> threeSum(int[] nums) {\n        Arrays.sort(nums);\n        List<List<Integer>> res = new ArrayList<>();\n        for (int i = 0; i < nums.length - 2; i++) {\n            if (i > 0 && nums[i] == nums[i - 1])\n                continue;\n            int left = i + 1, right = nums.length - 1;\n            while (left < right) {\n                int s = nums[i] + nums[left] + nums[right];\n                if (s < 0)\n                    left++;\n                else if (s > 0)\n                    right--;\n                else {\n                    res.add(Arrays.asList(nums[i], nums[left], nums[right]));\n                    while (left < right && nums[left] == nums[left + 1])\n                        left++;\n                    while (left < right && nums[right] == nums[right - 1])\n                        right--;\n                    left++; right--;\n                }\n            }\n        }\n        return res;\n    }\n}
